@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yisphere"
+version = "0.1.0"
+description = "易经·八字·六爻·黄道吉日 + AI 对话"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "openai>=1.12.0",
+    "sxtwl>=2.0.7",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "cnlunar>=2.24",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
