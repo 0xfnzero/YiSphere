@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """AI 对话服务：结合八字、黄历、易经等工具结果进行多轮对话。"""
 
+import datetime
 import os
 import re
 from typing import Any, Dict, List, Optional
@@ -15,9 +16,8 @@ from app.services.calendar import calendar_service
 
 
 def _extract_date(text: str) -> Optional[tuple]:
-    """从文本中提取公历日期 (year, month, day)。"""
-    # 2020年1月1日、2020-01-01、2020/1/1
-    m = re.search(r"(\d{4})[年\-/](\d{1,2})[月\-/](\d{1,2})", text)
+    """从文本中提取公历日期 (year, month, day)。支持 2020年1月1日、2020-01-01、2020.1.1。"""
+    m = re.search(r"(\d{4})[年\-/.](\d{1,2})[月\-/.](\d{1,2})", text)
     if m:
         y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
         if 1900 <= y <= 2100 and 1 <= mo <= 12 and 1 <= d <= 31:
@@ -26,8 +26,8 @@ def _extract_date(text: str) -> Optional[tuple]:
 
 
 def _extract_hour(text: str) -> Optional[int]:
-    """提取时辰或小时 0-23。"""
-    m = re.search(r"(\d{1,2})\s*[点时]", text)
+    """提取时辰或小时 0-23。支持 13点、13时、13:30、13：30。"""
+    m = re.search(r"(\d{1,2})\s*[点时:：]\s*\d{0,2}", text)
     if m:
         h = int(m.group(1))
         if 0 <= h <= 23:
@@ -61,10 +61,24 @@ def _detect_huangli_event(text: str) -> Optional[str]:
     return "嫁娶"  # 默认常见
 
 
+def _get_current_liunian_ref() -> Optional[str]:
+    """获取当前公历日期与今年流年（岁干支），供谈及「今年」运势时使用，避免 AI 说错年份。"""
+    today = datetime.date.today()
+    bazi_today = bazi_service.get_si_zhu(today.year, today.month, today.day)
+    if "error" in bazi_today:
+        return None
+    liunian = bazi_today.get("year")
+    if not liunian:
+        return None
+    return f"今日公历{today.year}年{today.month}月{today.day}日，今年流年（岁干支）为{liunian}。"
+
+
 def _extract_lunar_date(text: str) -> Optional[tuple]:
-    """从文本中提取农历日期 (年, 月, 日, 是否闰月)。如：农历1990年正月初五、1990年闰四月廿一。"""
-    # 农历1990年正月初五 / 1990年正月5日
-    m = re.search(r"农历?\s*(\d{4})[年\-](\d{1,2})[月\-](\d{1,2})", text)
+    """从文本中提取农历日期 (年, 月, 日, 是否闰月)。支持：农历1990年3月24日、农历生日1988.3.24。"""
+    # 农历 / 农历生日 + 1988年3月24日 或 1988.3.24
+    if not re.search(r"农历", text):
+        return None
+    m = re.search(r"农历\s*(?:生日)?\s*(\d{4})[年\-/.](\d{1,2})[月\-/.](\d{1,2})", text)
     if m:
         y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
         leap = bool(re.search(r"闰\s*\d*月", text))
@@ -76,12 +90,14 @@ def _extract_lunar_date(text: str) -> Optional[tuple]:
 def _gather_tool_results(last_user_message: str) -> str:
     """
     根据最后一条用户消息，自动调用八字/黄历/起卦/公历农历转换，并返回要注入的上下文。
-    用户给的公历日期会先换算成农历并注入，以便「农历预测更准确」。
+    用户给农历生日则按农历直接排八字；给公历则按公历排八字并附带农历对照。四柱均由程序计算，禁止 AI 自算。
     """
     ctx_parts: List[str] = []
     date = _extract_date(last_user_message)
     lunar_date = _extract_lunar_date(last_user_message)
     hour = _extract_hour(last_user_message)
+    ask_bazi = bool(re.search(r"八字|取名|名字|命理|运势|生辰|出生|宝宝|孩子", last_user_message))
+    ask_gua = bool(re.search(r"占|卦|起卦|算一卦|摇一卦|易经", last_user_message))
 
     # 1) 公历 -> 农历：用户明确问「农历生日/身份证日期对应农历/公历转农历」
     if date and re.search(r"农历生日|身份证|公历.*农历|阳历.*农历|转农历|换成农历|对应农历", last_user_message):
@@ -97,16 +113,39 @@ def _gather_tool_results(last_user_message: str) -> str:
         if "error" not in cal:
             ctx_parts.append(build_tools_context(calendar_result=cal))
 
-    # 3) 八字：消息里出现日期且像在问命理、取名、运势（注入公历→农历 + 八字，按农历解读更准）
-    if date and re.search(r"八字|取名|名字|命理|运势|生辰|出生|宝宝|孩子", last_user_message):
+    # 3) 八字（农历直接排盘）：用户给农历生日时，按农历直接排四柱（传统以农历排八字更常用）
+    bazi_injected = False
+    if lunar_date and ask_bazi:
+        ly, lm, ld, leap = lunar_date
+        bazi = bazi_service.get_si_zhu_from_lunar(ly, lm, ld, leap, hour)
+        if "error" not in bazi:
+            bazi_injected = True
+            cal = calendar_service.lunar2solar(ly, lm, ld, leap)
+            current_ref = _get_current_liunian_ref()
+            ctx_parts.append(build_tools_context(
+                calendar_result=cal if "error" not in cal else None,
+                bazi_result=bazi,
+                current_ref=current_ref,
+            ))
+        if ask_gua and not any("已起的卦象" in p for p in ctx_parts):
+            gua = iching_service.draw_random()
+            ctx_parts.append(build_tools_context(iching_result=gua))
+
+    # 4) 八字（公历）：用户给的是公历日期且未在上一步注入八字
+    if not bazi_injected and date and ask_bazi:
         y, mo, d = date
         cal = calendar_service.solar2lunar(y, mo, d)
         bazi = bazi_service.get_si_zhu(y, mo, d, hour)
         if "error" not in bazi or "error" not in cal:
+            current_ref = _get_current_liunian_ref()
             ctx_parts.append(build_tools_context(
                 calendar_result=cal if "error" not in cal else None,
                 bazi_result=bazi if "error" not in bazi else None,
+                current_ref=current_ref,
             ))
+        if ask_gua and not any("已起的卦象" in p for p in ctx_parts):
+            gua = iching_service.draw_random()
+            ctx_parts.append(build_tools_context(iching_result=gua))
 
     # 黄道吉日：问某类事宜的吉日
     event = _detect_huangli_event(last_user_message)
@@ -149,8 +188,8 @@ def _gather_tool_results(last_user_message: str) -> str:
             if "error" not in cal:
                 ctx_parts.append(build_tools_context(calendar_result=cal))
 
-    # 六爻/起卦：用户明确要占卦
-    if re.search(r"占|卦|起卦|算一卦|摇一卦|易经", last_user_message):
+    # 六爻/起卦：仅当尚未在八字分支中注入卦象时
+    if ask_gua and not any("已起的卦象" in p for p in ctx_parts):
         gua = iching_service.draw_random()
         ctx_parts.append(build_tools_context(iching_result=gua))
 

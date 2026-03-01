@@ -9,9 +9,11 @@ load_dotenv()
 
 import json
 
-from fastapi import FastAPI
+import urllib.request
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -87,6 +89,25 @@ class Lunar2SolarRequest(BaseModel):
 def api_masters():
     """可选大师角色列表，用于前端下拉。"""
     return list(MASTERS.values())
+
+
+@app.get("/api/avatar/{master_id}", response_class=Response)
+def api_avatar(master_id: str):
+    """头像代理：避免外链图片被拦截或跨域不显示。"""
+    master = MASTERS.get(master_id)
+    if not master:
+        raise HTTPException(status_code=404, detail="角色不存在")
+    url = master.get("avatar_url")
+    if not url:
+        raise HTTPException(status_code=404, detail="该角色无头像")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "YiSphere/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = resp.read()
+            content_type = resp.headers.get("Content-Type", "image/jpeg")
+            return Response(content=data, media_type=content_type)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"头像加载失败: {e!s}")
 
 
 @app.post("/api/chat", response_model=ChatResponse)

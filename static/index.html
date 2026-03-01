@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>易道 · 易经·八字·六爻·黄道吉日</title>
   <style>
     :root {
@@ -19,19 +19,22 @@
       --font: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font); }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
     .app-layout {
       display: flex;
-      height: 100vh;
+      height: 100%;
+      min-height: 0;
       overflow: hidden;
     }
     .sidebar {
-      width: 280px;
-      min-width: 260px;
+      width: 260px;
+      min-width: 240px;
+      flex-shrink: 0;
       background: var(--surface);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
+      min-height: 0;
       overflow: hidden;
     }
     .sidebar-header {
@@ -52,9 +55,14 @@
     }
     .master-list {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 0.5rem 0;
     }
+    .master-list::-webkit-scrollbar { width: 6px; }
+    .master-list::-webkit-scrollbar-track { background: transparent; }
+    .master-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
     .master-group-label {
       padding: 0.5rem 1rem;
       font-size: 0.75rem;
@@ -90,7 +98,27 @@
       font-weight: 600;
       color: #fff;
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+      overflow: hidden;
     }
+    .master-item .avatar img,
+    .msg-row .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .avatar .avatar-fallback {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: inherit;
+      font-weight: 600;
+      color: #fff;
+    }
+    .master-item .avatar,
+    .msg-row .avatar { position: relative; }
     .master-item .info {
       min-width: 0;
     }
@@ -111,9 +139,11 @@
     }
     .chat-panel {
       flex: 1;
+      min-width: 0;
+      min-height: 0;
       display: flex;
       flex-direction: column;
-      min-width: 0;
+      overflow: hidden;
       background: var(--bg);
     }
     .chat-header {
@@ -135,14 +165,23 @@
     }
     #messages {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 1rem 1.5rem 2rem;
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
-      max-width: 800px;
+      max-width: 960px;
       margin: 0 auto;
       width: 100%;
+    }
+    #messages::-webkit-scrollbar { width: 8px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    @supports (scrollbar-color: var(--border) transparent) {
+      #messages { scrollbar-color: var(--border) transparent; scrollbar-width: thin; }
+      .master-list { scrollbar-color: var(--border) transparent; scrollbar-width: thin; }
     }
     .msg-row {
       display: flex;
@@ -165,6 +204,7 @@
       font-size: 1rem;
       font-weight: 600;
       color: #fff;
+      overflow: hidden;
     }
     .msg-row.assistant .avatar {
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
@@ -178,11 +218,15 @@
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      max-width: 75%;
+      max-width: 72%;
       min-width: 0;
+    }
+    .msg-row.assistant .msg-block {
+      margin-right: auto;
     }
     .msg-row.user .msg-block {
       align-items: flex-end;
+      margin-left: auto;
       order: 0;
     }
     .msg-row.user .avatar { order: 1; }
@@ -242,7 +286,7 @@
       flex-shrink: 0;
     }
     #input-wrap {
-      max-width: 720px;
+      max-width: 960px;
       margin: 0 auto;
       display: flex;
       gap: 0.5rem;
@@ -277,16 +321,86 @@
     #send:hover { background: var(--accent-dim); color: var(--text); }
     #send:disabled { opacity: 0.5; cursor: not-allowed; }
     .hint {
-      max-width: 720px;
+      max-width: 960px;
       margin: 0.5rem auto 0;
       font-size: 0.8rem;
       color: var(--text-muted);
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 99;
+    }
+    .sidebar-overlay.show { display: block; }
+    .menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      margin: -0.25rem 0 0 -0.5rem;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.25rem;
+    }
+    .menu-btn:hover { background: rgba(255,255,255,0.08); }
+    .menu-btn:active { background: rgba(255,255,255,0.12); }
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: min(280px, 85vw);
+        min-width: 0;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+        padding-left: env(safe-area-inset-left, 0);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .chat-panel { min-width: 0; }
+      .chat-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        padding-left: calc(1rem + env(safe-area-inset-left, 0));
+      }
+      .chat-header .head-text { flex: 1; min-width: 0; }
+      .chat-header .name { font-size: 1rem; }
+      .chat-header .skill { font-size: 0.78rem; margin-top: 0.15rem; }
+      .menu-btn { display: flex; }
+      #messages {
+        padding: 0.75rem 1rem 1.5rem;
+        max-width: none;
+      }
+      .msg-row .msg-block { max-width: 85%; }
+      .msg-row .avatar { width: 36px; height: 36px; font-size: 0.9rem; }
+      .msg { padding: 0.6rem 0.9rem; font-size: 0.95rem; }
+      #input-area { padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom, 0)); padding-left: calc(1rem + env(safe-area-inset-left, 0)); padding-right: calc(1rem + env(safe-area-inset-right, 0)); }
+      #input-wrap { max-width: none; }
+      #input { min-height: 44px; padding: 0.65rem 0.9rem; font-size: 16px; }
+      #send { padding: 0.65rem 1rem; min-height: 44px; }
+      .hint { max-width: none; font-size: 0.75rem; }
+    }
+    @media (max-width: 480px) {
+      .sidebar { width: min(260px, 90vw); }
+      .chat-header .skill { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     }
   </style>
 </head>
 <body>
   <div class="app-layout">
-    <aside class="sidebar">
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h1>易道</h1>
         <p>选一位大师，与他聊天</p>
@@ -295,8 +409,11 @@
     </aside>
     <section class="chat-panel">
       <div class="chat-header" id="chatHeader">
-        <div class="name" id="chatTitle">神算子</div>
-        <div class="skill" id="chatSkill">男 · 五十开外 · 综合预测 · 易经、八字、六爻、择日皆通，有问必答。</div>
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="打开角色列表">☰</button>
+        <div class="head-text">
+          <div class="name" id="chatTitle">神算子</div>
+          <div class="skill" id="chatSkill">男 · 五十开外 · 综合预测 · 易经、八字、六爻、择日皆通，有问必答。</div>
+        </div>
       </div>
       <main id="messages"></main>
       <div id="input-area">
@@ -316,15 +433,31 @@
     const masterListEl = document.getElementById('masterList');
     const chatTitleEl = document.getElementById('chatTitle');
     const chatSkillEl = document.getElementById('chatSkill');
+    const sidebarEl = document.getElementById('sidebar');
+    const sidebarOverlayEl = document.getElementById('sidebarOverlay');
+    const menuBtnEl = document.getElementById('menuBtn');
 
     const TYPING_DELAY = 20;
+    const MOBILE_BREAK = 768;
+    const DEFAULT_AVATAR_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Confucius_Tang_Dynasty.jpg/220px-Confucius_Tang_Dynasty.jpg';
+
+    function isMobile() { return window.innerWidth <= MOBILE_BREAK; }
+    function openSidebar() {
+      if (sidebarEl) sidebarEl.classList.add('open');
+      if (sidebarOverlayEl) { sidebarOverlayEl.classList.add('show'); sidebarOverlayEl.setAttribute('aria-hidden', 'false'); }
+    }
+    function closeSidebar() {
+      if (sidebarEl) sidebarEl.classList.remove('open');
+      if (sidebarOverlayEl) { sidebarOverlayEl.classList.remove('show'); sidebarOverlayEl.setAttribute('aria-hidden', 'true'); }
+    }
+    function toggleSidebar() { sidebarEl && sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar(); }
     const SIDEBAR_GROUPS = [
       { label: '当代堂口', ids: ['shengsuanzi','naming','bazi','liuyao','qimen','fengshui','ziwei','meihua','liuren','taiyi','cezi','mianxiang','shouxiang','zemeng','zeri'] },
       { label: '老祖·仙人·仙翁', ids: ['xuanji','tianji','yuheng','qingming','guaxian','zixian','mengxian','xiangxian'] },
       { label: '古代名宿', ids: ['fuxi','laozi','kongzi','zhouwenwang','zhougong','jiangziya','guiguzi','zhugeliang','guanlu','guopu','xufu','jingfang','lichunfeng','yuantiangang','yangjunsong','chentuan','shaoyong','liubowen','laibuyi'] }
     ];
     const MASTER_MAP = {
-      shengsuanzi: { name: '神算子', avatar: '神', gender: '男', age: '五十开外', skill: '综合预测', intro: '易经、八字、六爻、择日皆通，有问必答。' },
+      shengsuanzi: { name: '神算子', avatar: '神', gender: '男', age: '五十开外', skill: '综合预测', intro: '易经、八字、六爻、择日皆通，有问必答。', avatar_url: DEFAULT_AVATAR_URL },
       naming: { name: '文渊先生', avatar: '文', skill: '取名' },
       bazi: { name: '子平先生', avatar: '平', skill: '八字命理' },
       liuyao: { name: '易翁老人', avatar: '易', skill: '六爻占卜' },
@@ -421,7 +554,9 @@
           item.className = 'master-item' + (id === currentMasterId ? ' active' : '');
           item.dataset.masterId = id;
           var meta = (m.gender && m.age) ? (m.gender + ' · ' + m.age) : '';
-          item.innerHTML = '<div class="avatar">' + (m.avatar || m.name[0]) + '</div><div class="info"><div class="name">' + (m.name || id) + '</div>' + (meta ? '<div class="meta">' + meta + '</div>' : '') + '<div class="skill">' + (m.skill || '') + '</div></div>';
+          var letter = m.avatar || (m.name && m.name[0]) || id[0];
+          var avatarHtml = '<span class="avatar-fallback" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:1rem;font-weight:600;color:#fff">' + letter + '</span>';
+          item.innerHTML = '<div class="avatar">' + avatarHtml + '</div><div class="info"><div class="name">' + (m.name || id) + '</div>' + (meta ? '<div class="meta">' + meta + '</div>' : '') + '<div class="skill">' + (m.skill || '') + '</div></div>';
           item.addEventListener('click', function() { switchMaster(id); });
           masterListEl.appendChild(item);
         });
@@ -446,11 +581,12 @@
       saveChatHistory();
       renderSidebar();
       updateChatHeader();
+      if (isMobile()) closeSidebar();
       messagesEl.innerHTML = '';
       const m = MASTER_MAP[id];
       const list = messagesByMaster[id] || [];
       list.forEach(function(msg) {
-        addMessage(msg.role, msg.content, msg.role === 'assistant' ? { masterName: m && m.name, masterAvatar: m && m.avatar } : null);
+        addMessage(msg.role, msg.content, msg.role === 'assistant' ? { masterName: m && m.name, masterAvatar: m && m.avatar, masterId: id } : null);
       });
     }
 
@@ -459,7 +595,7 @@
       var m = MASTER_MAP[currentMasterId];
       var list = messagesByMaster[currentMasterId] || [];
       list.forEach(function(msg) {
-        addMessage(msg.role, msg.content, msg.role === 'assistant' ? { masterName: m && m.name, masterAvatar: m && m.avatar } : null);
+        addMessage(msg.role, msg.content, msg.role === 'assistant' ? { masterName: m && m.name, masterAvatar: m && m.avatar, masterId: currentMasterId } : null);
       });
     }
 
@@ -480,10 +616,13 @@
       const row = document.createElement('div');
       row.className = 'msg-row ' + role;
       const nameLabel = role === 'user' ? '我' : (opts.masterName || '神算子');
-      const avatarChar = role === 'user' ? '我' : (opts.masterAvatar || '神');
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
-      avatar.textContent = avatarChar;
+      if (role === 'user') {
+        avatar.textContent = '我';
+      } else {
+        avatar.textContent = opts.masterAvatar || '神';
+      }
       const msgBlock = document.createElement('div');
       msgBlock.className = 'msg-block';
       const name = document.createElement('div');
@@ -512,7 +651,7 @@
       row.className = 'msg-row assistant';
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
-      avatar.textContent = m.avatar;
+      avatar.textContent = m.avatar || '神';
       const msgBlock = document.createElement('div');
       msgBlock.className = 'msg-block';
       const name = document.createElement('div');
@@ -584,7 +723,7 @@
           thinkRow.remove();
           const m = getCurrentMaster();
           const errMsg = '请求失败：' + (res.status || '网络错误');
-          addMessage('assistant', errMsg, { masterName: m.name, masterAvatar: m.avatar });
+          addMessage('assistant', errMsg, { masterName: m.name, masterAvatar: m.avatar, masterId: currentMasterId });
           pushMessage('assistant', errMsg);
           sendBtn.disabled = false;
           return;
@@ -622,7 +761,7 @@
                   firstChunk = false;
                   thinkRow.remove();
                   const m = getCurrentMaster();
-                  const r = addMessage('assistant', '', { masterName: m.name, masterAvatar: m.avatar });
+                  const r = addMessage('assistant', '', { masterName: m.name, masterAvatar: m.avatar, masterId: currentMasterId });
                   assistantBubble = r.bubble;
                 }
                 if (data.content && assistantBubble) {
@@ -645,14 +784,14 @@
           thinkRow.remove();
           fullReply = '（暂无回复）';
           const m = getCurrentMaster();
-          addMessage('assistant', fullReply, { masterName: m.name, masterAvatar: m.avatar });
+          addMessage('assistant', fullReply, { masterName: m.name, masterAvatar: m.avatar, masterId: currentMasterId });
         }
         pushMessage('assistant', fullReply);
       } catch (e) {
         thinkRow.remove();
         const errMsg = '请求失败：' + (e.message || '网络错误');
         const m = getCurrentMaster();
-        addMessage('assistant', errMsg, { masterName: m.name, masterAvatar: m.avatar });
+        addMessage('assistant', errMsg, { masterName: m.name, masterAvatar: m.avatar, masterId: currentMasterId });
         pushMessage('assistant', errMsg);
       }
       sendBtn.disabled = false;
@@ -668,9 +807,11 @@
                 if (m.intro) MASTER_MAP[m.id].intro = m.intro;
                 if (m.gender) MASTER_MAP[m.id].gender = m.gender;
                 if (m.age) MASTER_MAP[m.id].age = m.age;
+                if (m.avatar_url) MASTER_MAP[m.id].avatar_url = m.avatar_url;
               }
             });
           }
+          renderSidebar();
           updateChatHeader();
         })
         .catch(function() { updateChatHeader(); });
@@ -681,6 +822,9 @@
     updateChatHeader();
     restoreCurrentConversation();
     initMasters();
+
+    if (menuBtnEl) menuBtnEl.addEventListener('click', toggleSidebar);
+    if (sidebarOverlayEl) sidebarOverlayEl.addEventListener('click', closeSidebar);
 
     sendBtn.addEventListener('click', send);
     inputEl.addEventListener('keydown', (e) => {

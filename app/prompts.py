@@ -3,6 +3,9 @@
 
 # 大师角色：name 为人名，skill 为擅长之技（老祖宗传下的易学门类），不是名字
 # gender 性别，age 年龄（可为一句话描述，如「五十开外」「古稀之年」）
+# avatar 为单字/字母，头像展示用；avatar_url 为可选图片 URL（古人公版画像），无则用 avatar 文字
+# 古人头像来源：Wikimedia Commons 公有领域；无专属画像时用此公版古人像
+DEFAULT_AVATAR_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Confucius_Tang_Dynasty.jpg/220px-Confucius_Tang_Dynasty.jpg"
 MASTERS = {
     "shengsuanzi": {
         "id": "shengsuanzi",
@@ -227,6 +230,7 @@ MASTERS = {
         "id": "laozi",
         "name": "老子",
         "avatar": "老",
+        "avatar_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Laozi.jpg/220px-Laozi.jpg",
         "gender": "男",
         "age": "史载高寿",
         "skill": "道家·道德经",
@@ -236,6 +240,7 @@ MASTERS = {
         "id": "kongzi",
         "name": "孔子",
         "avatar": "孔",
+        "avatar_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Confucius_Tang_Dynasty.jpg/220px-Confucius_Tang_Dynasty.jpg",
         "gender": "男",
         "age": "七十有三",
         "skill": "易经·易传·儒学",
@@ -281,6 +286,7 @@ MASTERS = {
         "id": "zhugeliang",
         "name": "诸葛亮",
         "avatar": "亮",
+        "avatar_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Zhuge_liang.jpg/220px-Zhuge_liang.jpg",
         "gender": "男",
         "age": "五十有四",
         "skill": "奇门八阵",
@@ -387,6 +393,10 @@ MASTERS = {
     },
 }
 
+# 无专属头像的角色使用公版古人像
+for _m in MASTERS.values():
+    _m.setdefault("avatar_url", DEFAULT_AVATAR_URL)
+
 DEFAULT_MASTER_ID = "shengsuanzi"
 
 
@@ -423,6 +433,7 @@ def _base_instructions():
 - **古人式表达**：可适当用「罢了」「无妨」「且说」「此言差矣」等，避免现代网络用语和机械口吻，保持古人风范。
 
 ## 数据与分寸
+- 若上下文已有「已为您排出的八字四柱」，必须**直接引用**该年柱、月柱、日柱、时柱进行解读，**不得自行推算或改写**四柱；八字由程序按公历日期与时辰排出，你只需据此解读即可。
 - 若上下文已有「八字四柱」「黄历宜忌」「卦象」「公历农历换算」等数据，必须基于这些数据解读并自然引用，不编造与数据矛盾的说法。
 - 解读时兼顾传统说法与理性建议，不断言绝对吉凶；健康、法律、投资等大事，提醒对方酌情请教专业人士。
 
@@ -479,17 +490,26 @@ def build_tools_context(
     huangli_result: dict = None,
     iching_result: dict = None,
     calendar_result: dict = None,
+    current_ref: str = None,
 ) -> str:
     """把已算好的八字/黄历/卦象/公历农历等注入上下文，供大师引用。用语避免「系统」二字。"""
     parts = []
+    if current_ref:
+        parts.append("[当前参考]\n" + current_ref)
     if calendar_result and "error" not in calendar_result:
         parts.append("[已为您换算的公历↔农历]\n" + str(calendar_result) + "\n（传统预测以农历为准，以下解读请结合该农历日期。）")
     if bazi_result and "error" not in bazi_result:
-        parts.append("[已为您排出的八字四柱]\n" + str(bazi_result))
+        note = "（四柱由程序按您提供的农历日期与时辰直接排出，请严格按此年柱、月柱、日柱、时柱解读，勿自行推算或改写。）" if bazi_result.get("from_lunar") else "（四柱由程序按公历日期与时辰排出，请严格按此年柱、月柱、日柱、时柱解读，勿自行推算或改写。）"
+        # 注入时去掉 from_lunar，避免给模型冗余字段
+        bazi_display = {k: v for k, v in bazi_result.items() if k != "from_lunar"}
+        parts.append("[已为您排出的八字四柱]\n" + str(bazi_display) + "\n" + note)
     if huangli_result and "error" not in huangli_result:
         parts.append("[已查得的黄历信息]\n" + str(huangli_result))
     if iching_result and "error" not in iching_result:
         parts.append("[已起的卦象]\n" + str(iching_result))
     if not parts:
         return ""
-    return "\n\n".join(parts) + "\n\n请务必依据以上数据为来客解读或给建议，勿编造与上述数据矛盾的结论。"
+    tail = "请务必依据以上数据为来客解读或给建议，勿编造与上述数据矛盾的结论。"
+    if current_ref:
+        tail += "谈及「今年」、流年、运势时，必须使用「当前参考」中的流年干支，勿自行编造或使用错误年份。"
+    return "\n\n".join(parts) + "\n\n" + tail
