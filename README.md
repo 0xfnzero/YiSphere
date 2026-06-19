@@ -29,6 +29,7 @@
 
 <p align="center">
     <a href="https://github.com/0xfnzero/YiSphere/blob/main/README.md">中文</a> |
+    <a href="https://github.com/0xfnzero/YiSphere/blob/main/README_EN.md">English</a> |
     <a href="https://fnzero.dev/">Website</a> |
     <a href="https://t.me/fnzero_group">Telegram</a> |
     <a href="https://discord.gg/vuazbGkqQE">Discord</a>
