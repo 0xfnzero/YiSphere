@@ -43,6 +43,16 @@ YiSphere 易道是一个结合传统术数与 AI 的对话式预测、取名、�
 
 **Search keywords / 搜索关键词**：AI fortune telling, I Ching AI, I Ching divination, BaZi calculator, Chinese astrology, Chinese metaphysics, Liu Yao, Huangli, auspicious date picker, Chinese naming, 易经 AI, 易经占卜, 八字排盘, 四柱八字, 六爻起卦, 黄道吉日, 取名, 宝宝起名, 公司起名, 择日, 农历转换, 奇门遁甲, 紫微斗数, 梅花易数。
 
+## 这个项目提供什么
+
+| 方向 | 内容 |
+| --- | --- |
+| 应用形态 | FastAPI 后端 + 单页聊天前端 + SSE 流式回复 |
+| 本地计算 | 八字四柱、农历公历转换、黄历宜忌、三枚铜钱法起卦 |
+| AI 解读 | OpenAI 兼容接口、DeepSeek 默认配置、多角色大师对话 |
+| 工具接口 | `/api/tools/bazi`、`/api/tools/huangli/*`、`/api/tools/iching/draw`、`/api/tools/calendar/*` |
+| 使用场景 | AI 占卜产品原型、中文命理工具站、取名择日、LLM + 结构化工具调用示例 |
+
 ## 为什么做这个项目
 
 很多 AI 占卜项目直接让模型“凭空排盘”，容易把四柱、卦象、农历日期和黄历宜忌说错。YiSphere 的思路是：**程序负责计算，LLM 负责表达**。八字、农历转换、三枚铜钱法起卦、黄历择日都先由后端工具生成，模型只在这些结果基础上做解读、归纳和追问。

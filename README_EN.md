@@ -48,6 +48,16 @@ The application first computes structured results locally, including BaZi pillar
 
 **Search keywords**: AI fortune telling, I Ching AI, I Ching divination, BaZi calculator, Four Pillars, Liu Yao, Huangli, auspicious date picker, Chinese astrology, Chinese metaphysics, Chinese naming, Feng Shui, Zi Wei Dou Shu, Plum Blossom Numerology, lunar calendar converter.
 
+## What This Project Provides
+
+| Area | Coverage |
+| --- | --- |
+| App shape | FastAPI backend, single-page chat UI, and SSE streaming responses |
+| Local calculation | BaZi/Four Pillars, solar-lunar conversion, Huangli, and three-coin I Ching hexagrams |
+| AI interpretation | OpenAI-compatible API, DeepSeek defaults, and multi-master persona chat |
+| Tool APIs | `/api/tools/bazi`, `/api/tools/huangli/*`, `/api/tools/iching/draw`, `/api/tools/calendar/*` |
+| Use cases | AI divination prototypes, Chinese metaphysics tools, naming/date selection apps, LLM + structured tool demos |
+
 ## Why YiSphere
 
 Many AI divination demos ask the model to invent astrology or divination results directly. That often produces incorrect pillars, wrong lunar dates, mismatched hexagrams, or unreliable Huangli recommendations.
