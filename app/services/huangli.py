@@ -31,6 +31,20 @@ EVENT_YI_KEYWORDS = {
     "嫁娶_纳采": ["嫁娶", "纳采"],
 }
 
+EVENT_ALIASES = {
+    "结婚": "婚嫁",
+    "婚礼": "婚嫁",
+    "领证": "婚嫁",
+    "办酒": "婚嫁",
+    "开张": "开业",
+    "乔迁": "入宅",
+    "装修": "装修",
+    "下葬": "安葬",
+    "远行": "出行",
+    "祭祖": "祭祀",
+    "求子": "求嗣",
+}
+
 
 def _lunar_to_dict(a: Any) -> dict:
     """将 cnlunar.Lunar 对象转为可序列化的字典。"""
@@ -54,8 +68,8 @@ def _lunar_to_dict(a: Any) -> dict:
         "星期": getattr(a, "weekDayCn", None),
         "宜": good,
         "忌": bad,
-        "今日吉神": getattr(a, "goodGodName", None),
-        "今日凶煞": getattr(a, "badGodName", None),
+        "今日吉神": getattr(a, "goodGodName", None) or [],
+        "今日凶煞": getattr(a, "badGodName", None) or [],
         "宜忌等第": getattr(a, "todayLevelName", None),
         "十二建星": getattr(a, "get_today12DayOfficer", lambda: None)(),
         "彭祖百忌": getattr(a, "get_pengTaboo", lambda: None)(),
@@ -80,13 +94,25 @@ class HuangliService:
         except Exception as e:
             return {"error": f"日期无效或超出范围: {e}"}
 
-    def _yi_contains_keywords(self, good_thing: Any, keywords: List[str]) -> bool:
+    def _normalize_event_type(self, event_type: str) -> tuple[str, List[str]]:
+        event = (event_type or "").strip()
+        event = EVENT_ALIASES.get(event, event)
+        keywords = EVENT_YI_KEYWORDS.get(event)
+        if not keywords:
+            for key, value in EVENT_YI_KEYWORDS.items():
+                if event in key or key in event:
+                    event = key
+                    keywords = value
+                    break
+        return event, keywords or ([event] if event else [])
+
+    def _contains_keywords(self, things: Any, keywords: List[str]) -> bool:
         if not keywords:
             return False
-        if isinstance(good_thing, str):
-            good_thing = [good_thing] if good_thing else []
-        good_str = " ".join(good_thing) if good_thing else ""
-        return any(kw in good_str for kw in keywords)
+        if isinstance(things, str):
+            things = [things] if things else []
+        text = " ".join(str(x) for x in things) if things else ""
+        return any(kw in text for kw in keywords)
 
     def select_auspicious_days(
         self,
@@ -101,15 +127,9 @@ class HuangliService:
         """
         if not self._cnlunar:
             return [{"error": "未安装 cnlunar，请执行: pip install cnlunar"}]
-        keywords = EVENT_YI_KEYWORDS.get(event_type)
+        event_type, keywords = self._normalize_event_type(event_type)
         if not keywords:
-            # 尝试模糊匹配
-            for k, v in EVENT_YI_KEYWORDS.items():
-                if event_type in k or k in event_type:
-                    keywords = v
-                    break
-        if not keywords:
-            keywords = [event_type]
+            return []
         result: List[dict] = []
         current = start_date
         while current <= end_date and len(result) < max_days:
@@ -117,12 +137,21 @@ class HuangliService:
                 dt = datetime.datetime(current.year, current.month, current.day, 12)
                 a = self._cnlunar.Lunar(dt, godType="8char")
                 good = getattr(a, "goodThing", None) or []
-                if self._yi_contains_keywords(good, keywords):
+                bad = getattr(a, "badThing", None) or []
+                if self._contains_keywords(good, keywords) and not self._contains_keywords(bad, keywords):
+                    officer = getattr(a, "get_today12DayOfficer", lambda: None)()
                     result.append({
                         "date": current.isoformat(),
+                        "event_type": event_type,
                         "农历": f"{getattr(a, 'lunarYearCn', '')} {getattr(a, 'lunarMonthCn', '')} {getattr(a, 'lunarDayCn', '')}",
                         "星期": getattr(a, "weekDayCn", None),
                         "宜": good,
+                        "忌": bad,
+                        "吉神": getattr(a, "goodGodName", None) or [],
+                        "凶煞": getattr(a, "badGodName", None) or [],
+                        "十二建星": officer,
+                        "冲煞": getattr(a, "chineseZodiacClash", None),
+                        "宜忌等第": getattr(a, "todayLevelName", None),
                     })
             except Exception:
                 pass

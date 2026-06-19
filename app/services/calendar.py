@@ -67,7 +67,7 @@ def _lunar_day_cn(day: int) -> str:
 
 
 def _shengxiao(year: int) -> str:
-    """公历年份对应生肖（以春节为界需农历年，这里用公历近似；更准可用日对象 getYearGZ(True).dz）。"""
+    """农历年对应生肖。"""
     # 1900 鼠年，地支 0 子鼠
     base = 1900
     idx = (year - base) % 12
@@ -91,11 +91,13 @@ class CalendarService:
             day_obj = sxtwl.fromSolar(year, month, day)
         except Exception:
             return {"error": "日期无效或超出支持范围"}
+        solar = _get_solar(day_obj)
+        if solar and solar != (year, month, day):
+            return {"error": "日期无效或超出支持范围"}
         lunar = _get_lunar(day_obj)
         if not lunar:
             return {"error": "无法获取农历信息"}
         ly, lm, ld, leap = lunar
-        solar = _get_solar(day_obj)
         solar_str = f"{solar[0]}年{solar[1]}月{solar[2]}日" if solar else f"{year}年{month}月{day}日"
         leap_str = "闰" if leap else ""
         lunar_cn = f"农历{ly}年{leap_str}{_lunar_month_cn(lm)}{_lunar_day_cn(ld)}"
@@ -126,10 +128,12 @@ class CalendarService:
         try:
             day_obj = sxtwl.fromLunar(lunar_year, lunar_month, lunar_day, is_leap_month)
         except Exception as e:
-            try:
-                day_obj = sxtwl.fromLunar(lunar_year, lunar_month, lunar_day)
-            except Exception:
-                return {"error": f"农历日期无效或超出范围: {e}"}
+            return {"error": f"农历日期无效或超出范围: {e}"}
+        lunar = _get_lunar(day_obj)
+        if lunar:
+            ly, lm, ld, leap = lunar
+            if (ly, lm, ld, bool(leap)) != (lunar_year, lunar_month, lunar_day, bool(is_leap_month)):
+                return {"error": "农历日期无效或闰月标记不匹配"}
         solar = _get_solar(day_obj)
         if not solar:
             return {"error": "无法得到公历日期"}

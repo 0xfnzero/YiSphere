@@ -506,7 +506,28 @@ def build_tools_context(
     if huangli_result and "error" not in huangli_result:
         parts.append("[已查得的黄历信息]\n" + str(huangli_result))
     if iching_result and "error" not in iching_result:
-        parts.append("[已起的卦象]\n" + str(iching_result))
+        if iching_result.get("primary"):
+            primary = iching_result["primary"]
+            changed = iching_result.get("changed")
+            moving_lines = iching_result.get("moving_lines") or []
+            line_text = "、".join(
+                f"{line.get('position_name')}={line.get('name')}{'（动）' if line.get('moving') else ''}"
+                for line in iching_result.get("lines", [])
+            )
+            moving_text = "、".join(line.get("title", "") for line in moving_lines) or "无"
+            changed_text = f"{changed['id']} {changed['full']}" if changed else "无变卦"
+            gua_text = (
+                f"起卦方法：{iching_result.get('method', '三枚铜钱法')}，六爻顺序：{iching_result.get('line_order', '自下而上')}。\n"
+                f"本卦：第{primary['id']}卦 {primary['full']}，卦辞要点：{primary.get('brief', '')}\n"
+                f"动爻：{moving_text}。\n"
+                f"变卦：{changed_text}。\n"
+                f"六爻：{line_text}。\n"
+                f"摘要：{iching_result.get('summary', '')}\n"
+                "解卦时请先看本卦，再看动爻与变卦；无动爻则以本卦为主。"
+            )
+            parts.append("[已起的卦象]\n" + gua_text)
+        else:
+            parts.append("[已起的卦象]\n" + str(iching_result))
     if not parts:
         return ""
     tail = "请务必依据以上数据为来客解读或给建议，勿编造与上述数据矛盾的结论。"

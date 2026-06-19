@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""易经六十四卦数据与简易起卦。"""
+"""易经六十四卦数据与三枚铜钱法起卦。"""
 
 import random
-from typing import List, Optional
+from typing import Optional, Sequence
 
 # 六十四卦：卦序、卦名、卦辞（简要）
 # 参考《周易》卦序，二进制下卦上卦：乾1 兑2 离3 震4 巽5 坎6 艮7 坤8，卦序按传统顺序
@@ -69,9 +69,71 @@ ICHING_64 = [
     {"id": 60, "name": "节", "full": "水泽节", "hex": "010011", "brief": "亨。苦节不可贞。节制。"},
     {"id": 61, "name": "中孚", "full": "风泽中孚", "hex": "110011", "brief": "豚鱼吉，利涉大川，利贞。诚信。"},
     {"id": 62, "name": "小过", "full": "雷山小过", "hex": "001100", "brief": "亨，利贞。可小事，不可大事。小有过越。"},
-    {"id": 63, "name": "既济", "full": "水火既济", "hex": "101010", "brief": "亨，小利贞。初吉终乱。事成防变。"},
-    {"id": 64, "name": "未济", "full": "火水未济", "hex": "010101", "brief": "亨。小狐汔济，濡其尾，无攸利。未成慎终。"},
+    {"id": 63, "name": "既济", "full": "水火既济", "hex": "010101", "brief": "亨，小利贞。初吉终乱。事成防变。"},
+    {"id": 64, "name": "未济", "full": "火水未济", "hex": "101010", "brief": "亨。小狐汔济，濡其尾，无攸利。未成慎终。"},
 ]
+
+
+TRIGRAMS = {
+    "111": {"name": "乾", "image": "天"},
+    "011": {"name": "兑", "image": "泽"},
+    "101": {"name": "离", "image": "火"},
+    "001": {"name": "震", "image": "雷"},
+    "110": {"name": "巽", "image": "风"},
+    "010": {"name": "坎", "image": "水"},
+    "100": {"name": "艮", "image": "山"},
+    "000": {"name": "坤", "image": "地"},
+}
+
+LINE_NAMES = {
+    6: {"name": "老阴", "yin_yang": "阴", "moving": True},
+    7: {"name": "少阳", "yin_yang": "阳", "moving": False},
+    8: {"name": "少阴", "yin_yang": "阴", "moving": False},
+    9: {"name": "老阳", "yin_yang": "阳", "moving": True},
+}
+
+POSITION_LABELS = ["初爻", "二爻", "三爻", "四爻", "五爻", "上爻"]
+HEXAGRAM_BY_HEX = {gua["hex"]: gua for gua in ICHING_64}
+
+
+def _with_trigrams(gua: dict) -> dict:
+    """给卦补充上下卦信息。hex 为自上而下的六爻，前三位为上卦。"""
+    data = gua.copy()
+    upper_bits = data["hex"][:3]
+    lower_bits = data["hex"][3:]
+    upper = TRIGRAMS.get(upper_bits, {"name": "", "image": ""})
+    lower = TRIGRAMS.get(lower_bits, {"name": "", "image": ""})
+    data["upper_trigram"] = {"bits": upper_bits, **upper}
+    data["lower_trigram"] = {"bits": lower_bits, **lower}
+    return data
+
+
+def _line_bit(value: int) -> int:
+    """六/八为阴，七/九为阳。"""
+    return 1 if value in (7, 9) else 0
+
+
+def _gua_from_bottom_lines(bits_bottom_to_top: Sequence[int]) -> dict:
+    """六爻按起卦顺序自下而上输入，转换为卦库自上而下 hex。"""
+    hex_code = "".join(str(bit) for bit in reversed(bits_bottom_to_top))
+    gua = HEXAGRAM_BY_HEX.get(hex_code)
+    if not gua:
+        raise ValueError(f"未找到卦象: {hex_code}")
+    return _with_trigrams(gua)
+
+
+def _line_record(position: int, value: int) -> dict:
+    meta = LINE_NAMES[value]
+    yin_yang = meta["yin_yang"]
+    return {
+        "position": position,
+        "position_name": POSITION_LABELS[position - 1],
+        "value": value,
+        "name": meta["name"],
+        "yin_yang": yin_yang,
+        "moving": meta["moving"],
+        "title": f"{POSITION_LABELS[position - 1]}{'九' if yin_yang == '阳' else '六'}",
+    }
 
 
 class IchingService:
@@ -80,18 +142,78 @@ class IchingService:
     def get_gua_by_id(self, gua_id: int) -> Optional[dict]:
         """按卦序取卦（1-64）。"""
         if 1 <= gua_id <= 64:
-            return ICHING_64[gua_id - 1].copy()
+            return _with_trigrams(ICHING_64[gua_id - 1])
         return None
 
+    def get_gua_by_hex(self, hex_code: str) -> Optional[dict]:
+        """按自上而下六爻编码取卦。"""
+        gua = HEXAGRAM_BY_HEX.get(hex_code)
+        return _with_trigrams(gua) if gua else None
+
+    def draw_by_lines(self, line_values: Sequence[int]) -> dict:
+        """
+        按六个爻值生成本卦与变卦。
+
+        line_values 按起卦顺序自下而上排列，取值为：
+        6=老阴、7=少阳、8=少阴、9=老阳。
+        """
+        values = list(line_values)
+        if len(values) != 6 or any(v not in LINE_NAMES for v in values):
+            raise ValueError("六爻爻值必须是 6/7/8/9 组成的 6 个数字")
+
+        primary_bits = [_line_bit(v) for v in values]
+        changed_bits = [
+            1 - bit if values[idx] in (6, 9) else bit
+            for idx, bit in enumerate(primary_bits)
+        ]
+        lines = [_line_record(i + 1, value) for i, value in enumerate(values)]
+        moving_lines = [line for line in lines if line["moving"]]
+        primary = _gua_from_bottom_lines(primary_bits)
+        changed = _gua_from_bottom_lines(changed_bits) if moving_lines else None
+
+        result = {
+            "method": "三枚铜钱法",
+            "line_order": "自下而上",
+            "lines": lines,
+            "moving_lines": moving_lines,
+            "primary": primary,
+            "changed": changed,
+            "summary": self._summary(primary, changed, moving_lines),
+        }
+        # 兼容旧前端/旧提示词：顶层仍暴露本卦常用字段。
+        result.update({
+            "id": primary["id"],
+            "name": primary["name"],
+            "full": primary["full"],
+            "hex": primary["hex"],
+            "brief": primary["brief"],
+        })
+        return result
+
     def draw_random(self) -> dict:
-        """随机起一卦（用于占问）。"""
-        idx = random.randint(0, 63)
-        return ICHING_64[idx].copy()
+        """三枚铜钱法随机起卦：自下而上生成六爻。"""
+        return self.draw_by_lines([self._draw_coin_line() for _ in range(6)])
 
     def draw_by_seed(self, seed: int) -> dict:
-        """按种子起卦，相同种子得相同卦。"""
-        idx = (abs(seed) % 64)
-        return ICHING_64[idx].copy()
+        """按种子起卦，相同种子得相同六爻、本卦与变卦。"""
+        rng = random.Random(seed)
+        return self.draw_by_lines([self._draw_coin_line(rng) for _ in range(6)])
+
+    @staticmethod
+    def _draw_coin_line(rng: random.Random | None = None) -> int:
+        """
+        三枚铜钱法：正面记 3，反面记 2。
+        三枚相加得 6/7/8/9，对应老阴/少阳/少阴/老阳。
+        """
+        source = rng or random
+        return sum(source.choice((2, 3)) for _ in range(3))
+
+    @staticmethod
+    def _summary(primary: dict, changed: Optional[dict], moving_lines: list[dict]) -> str:
+        if not moving_lines:
+            return f"本卦为{primary['full']}，无动爻，以本卦卦辞与卦象为主。"
+        line_text = "、".join(line["title"] for line in moving_lines)
+        return f"本卦为{primary['full']}，动爻为{line_text}，变卦为{changed['full']}。"
 
 
 iching_service = IchingService()

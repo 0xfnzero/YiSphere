@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>易道 · 易经·八字·六爻·黄道吉日</title>
+  <link rel="icon" href="data:," />
   <style>
     :root {
       --bg: #0f0e14;
@@ -19,18 +20,20 @@
       --font: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
     .app-layout {
       display: flex;
+      width: 100vw;
+      max-width: none;
       height: 100%;
       min-height: 0;
       overflow: hidden;
     }
     .sidebar {
-      width: 260px;
-      min-width: 240px;
-      flex-shrink: 0;
-      background: var(--surface);
+      width: 292px;
+      min-width: 292px;
+      flex: 0 0 292px;
+      background: #17161f;
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
@@ -38,13 +41,14 @@
       overflow: hidden;
     }
     .sidebar-header {
-      padding: 1rem;
+      padding: 1rem 1rem 0.9rem;
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent);
     }
     .sidebar-header h1 {
       margin: 0;
-      font-size: 1.1rem;
+      font-size: 1.12rem;
       font-weight: 600;
       color: var(--accent);
     }
@@ -58,38 +62,44 @@
       min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 0.5rem 0;
+      padding: 0.55rem 0.55rem 0.75rem;
     }
     .master-list::-webkit-scrollbar { width: 6px; }
     .master-list::-webkit-scrollbar-track { background: transparent; }
     .master-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
     .master-group-label {
-      padding: 0.5rem 1rem;
-      font-size: 0.75rem;
+      padding: 0.65rem 0.45rem 0.45rem;
+      font-size: 0.72rem;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
     .master-item {
+      position: relative;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.6rem 1rem;
+      gap: 0.7rem;
+      min-height: 66px;
+      padding: 0.58rem 0.65rem;
       cursor: pointer;
-      border-left: 3px solid transparent;
-      transition: background 0.15s;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
     }
     .master-item:hover {
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.045);
+      border-color: rgba(255,255,255,0.08);
+      transform: translateX(1px);
     }
     .master-item.active {
-      background: rgba(201, 162, 39, 0.12);
-      border-left-color: var(--accent);
+      background: linear-gradient(90deg, rgba(var(--skill-rgb), 0.2), rgba(255,255,255,0.035));
+      border-color: rgba(var(--skill-rgb), 0.38);
+      box-shadow: inset 3px 0 0 rgb(var(--skill-rgb));
     }
     .master-item .avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -97,8 +107,29 @@
       font-size: 1rem;
       font-weight: 600;
       color: #fff;
-      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+      background:
+        linear-gradient(135deg, var(--avatar-from), var(--avatar-to));
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 7px 18px rgba(0,0,0,0.24);
       overflow: hidden;
+    }
+    .master-item .avatar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.22), transparent 42%),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.09) 0 1px, transparent 1px 8px);
+      opacity: 0.55;
+    }
+    .master-item .avatar::after {
+      content: attr(data-mark);
+      position: absolute;
+      right: 4px;
+      bottom: 2px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.72);
     }
     .master-item .avatar img,
     .msg-row .avatar img {
@@ -113,19 +144,25 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: inherit;
-      font-weight: 600;
+      font-size: 1.03rem;
+      font-weight: 700;
       color: #fff;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.28);
+      z-index: 1;
     }
     .master-item .avatar,
     .msg-row .avatar { position: relative; }
     .master-item .info {
       min-width: 0;
+      flex: 1;
     }
     .master-item .info .name {
       font-size: 0.95rem;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .master-item .info .meta {
       font-size: 0.72rem;
@@ -133,12 +170,27 @@
       margin-top: 0.1rem;
     }
     .master-item .info .skill {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin-top: 0.15rem;
+      display: inline-flex;
+      align-items: center;
+      max-width: 100%;
+      height: 21px;
+      padding: 0 0.45rem;
+      border-radius: 6px;
+      margin-top: 0.22rem;
+      background: rgba(var(--skill-rgb), 0.16);
+      border: 1px solid rgba(var(--skill-rgb), 0.23);
+      color: rgb(var(--skill-rgb));
+      font-size: 0.72rem;
+      font-weight: 600;
+      line-height: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .chat-panel {
-      flex: 1;
+      flex: 1 1 auto;
+      width: calc(100vw - 292px);
+      max-width: none;
       min-width: 0;
       min-height: 0;
       display: flex;
@@ -147,10 +199,18 @@
       background: var(--bg);
     }
     .chat-header {
+      width: 100%;
       padding: 0.85rem 1.25rem;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .chat-header .head-text {
+      flex: 1;
+      min-width: 0;
     }
     .chat-header .name {
       font-size: 1.05rem;
@@ -162,6 +222,40 @@
       color: var(--text-muted);
       margin-top: 0.2rem;
       line-height: 1.45;
+    }
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 40px;
+      height: 40px;
+      padding: 0 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.88rem;
+    }
+    .icon-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(201,162,39,0.08);
+    }
+    .model-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     #messages {
       flex: 1;
@@ -280,6 +374,7 @@
       50% { opacity: 1; }
     }
     #input-area {
+      width: 100%;
       padding: 1rem 1.5rem 1.5rem;
       background: var(--surface);
       border-top: 1px solid var(--border);
@@ -333,7 +428,112 @@
       background: rgba(0,0,0,0.5);
       z-index: 99;
     }
-    .sidebar-overlay.show { display: block; }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 150;
+      background: rgba(0,0,0,0.62);
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-overlay.show { display: flex; }
+    .settings-modal {
+      width: min(520px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+      overflow: hidden;
+    }
+    .settings-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-head h2 {
+      margin: 0;
+      font-size: 1rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .settings-body {
+      padding: 1rem 1.25rem 1.25rem;
+      display: grid;
+      gap: 0.85rem;
+    }
+    .field {
+      display: grid;
+      gap: 0.35rem;
+    }
+    .field label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .field input {
+      width: 100%;
+      height: 42px;
+      padding: 0 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.95rem;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .toggle-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+    .toggle-row input {
+      margin-top: 0.15rem;
+      accent-color: var(--accent);
+    }
+    .settings-note {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      padding-top: 0.25rem;
+    }
+    .secondary-btn,
+    .primary-btn {
+      min-height: 40px;
+      padding: 0 0.9rem;
+      border-radius: 8px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .secondary-btn {
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+    }
+    .secondary-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .primary-btn {
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 600;
+    }
+    .primary-btn:hover { background: var(--accent-dim); color: var(--text); }
     .menu-btn {
       display: none;
       align-items: center;
@@ -351,14 +551,15 @@
     }
     .menu-btn:hover { background: rgba(255,255,255,0.08); }
     .menu-btn:active { background: rgba(255,255,255,0.12); }
-    @media (max-width: 768px) {
+    @media (max-width: 700px) {
       .sidebar {
         position: fixed;
         left: 0;
         top: 0;
         bottom: 0;
-        width: min(280px, 85vw);
+        width: min(292px, 86vw);
         min-width: 0;
+        flex: 0 0 auto;
         z-index: 100;
         transform: translateX(-100%);
         transition: transform 0.25s ease;
@@ -366,9 +567,10 @@
         padding-left: env(safe-area-inset-left, 0);
       }
       .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.show { display: block; }
       .chat-panel { min-width: 0; }
+      .chat-panel { width: 100vw; max-width: none; }
       .chat-header {
-        display: flex;
         align-items: flex-start;
         gap: 0.5rem;
         padding: 0.75rem 1rem;
@@ -378,6 +580,8 @@
       .chat-header .name { font-size: 1rem; }
       .chat-header .skill { font-size: 0.78rem; margin-top: 0.15rem; }
       .menu-btn { display: flex; }
+      .header-actions { margin-left: auto; }
+      .model-status { display: none; }
       #messages {
         padding: 0.75rem 1rem 1.5rem;
         max-width: none;
@@ -392,8 +596,13 @@
       .hint { max-width: none; font-size: 0.75rem; }
     }
     @media (max-width: 480px) {
-      .sidebar { width: min(260px, 90vw); }
+      .sidebar { width: min(284px, 90vw); }
+      .master-list { padding: 0.45rem; }
+      .master-item { min-height: 62px; padding: 0.52rem 0.56rem; }
+      .master-item .avatar { width: 42px; height: 42px; }
       .chat-header .skill { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+      .icon-btn { min-width: 36px; height: 36px; padding: 0 0.65rem; font-size: 0.82rem; }
+      .settings-modal { max-height: calc(100vh - 2rem); overflow-y: auto; }
     }
   </style>
 </head>
@@ -414,6 +623,10 @@
           <div class="name" id="chatTitle">神算子</div>
           <div class="skill" id="chatSkill">男 · 五十开外 · 综合预测 · 易经、八字、六爻、择日皆通，有问必答。</div>
         </div>
+        <div class="header-actions">
+          <div class="model-status" id="modelStatus">模型：读取中</div>
+          <button type="button" class="icon-btn" id="settingsBtn" title="配置 LLM API Key 和模型" aria-label="配置模型">模型</button>
+        </div>
       </div>
       <main id="messages"></main>
       <div id="input-area">
@@ -424,6 +637,38 @@
         <p class="hint">支持：公历↔农历、取名、八字、占卦、择日等</p>
       </div>
     </section>
+  </div>
+  <div class="modal-overlay" id="settingsOverlay" aria-hidden="true">
+    <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="settings-head">
+        <h2 id="settingsTitle">LLM 设置</h2>
+        <button type="button" class="icon-btn" id="settingsClose" aria-label="关闭设置">×</button>
+      </div>
+      <form class="settings-body" id="settingsForm" autocomplete="off">
+        <div class="field">
+          <label for="llmBaseUrl">Base URL</label>
+          <input id="llmBaseUrl" type="url" autocomplete="off" placeholder="https://api.deepseek.com 或 https://api.openai.com/v1" />
+        </div>
+        <div class="field">
+          <label for="llmApiKey">API Key</label>
+          <input id="llmApiKey" type="password" autocomplete="off" placeholder="不填则使用后端 .env" />
+        </div>
+        <div class="field">
+          <label for="llmModel">模型</label>
+          <input id="llmModel" type="text" autocomplete="off" placeholder="deepseek-chat / gpt-4.1-mini 等" />
+        </div>
+        <label class="toggle-row" for="llmRemember">
+          <input id="llmRemember" type="checkbox" />
+          <span>保存到本机浏览器。勾选后 API Key 会存入 localStorage，只适合个人电脑或本地开发环境。</span>
+        </label>
+        <p class="settings-note" id="settingsNote">未填写 API Key 时，会继续使用后端环境变量 OPENAI_API_KEY。</p>
+        <div class="settings-actions">
+          <button type="button" class="secondary-btn" id="settingsClear">清空</button>
+          <button type="button" class="secondary-btn" id="settingsCancel">取消</button>
+          <button type="submit" class="primary-btn" id="settingsSave">保存</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script>
@@ -436,13 +681,26 @@
     const sidebarEl = document.getElementById('sidebar');
     const sidebarOverlayEl = document.getElementById('sidebarOverlay');
     const menuBtnEl = document.getElementById('menuBtn');
+    const settingsBtnEl = document.getElementById('settingsBtn');
+    const settingsOverlayEl = document.getElementById('settingsOverlay');
+    const settingsCloseEl = document.getElementById('settingsClose');
+    const settingsCancelEl = document.getElementById('settingsCancel');
+    const settingsFormEl = document.getElementById('settingsForm');
+    const settingsSaveEl = document.getElementById('settingsSave');
+    const settingsClearEl = document.getElementById('settingsClear');
+    const llmBaseUrlEl = document.getElementById('llmBaseUrl');
+    const llmApiKeyEl = document.getElementById('llmApiKey');
+    const llmModelEl = document.getElementById('llmModel');
+    const llmRememberEl = document.getElementById('llmRemember');
+    const modelStatusEl = document.getElementById('modelStatus');
 
     const TYPING_DELAY = 20;
-    const MOBILE_BREAK = 768;
+    const MOBILE_BREAK = 700;
     const DEFAULT_AVATAR_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Confucius_Tang_Dynasty.jpg/220px-Confucius_Tang_Dynasty.jpg';
 
     function isMobile() { return window.innerWidth <= MOBILE_BREAK; }
     function openSidebar() {
+      if (!isMobile()) return;
       if (sidebarEl) sidebarEl.classList.add('open');
       if (sidebarOverlayEl) { sidebarOverlayEl.classList.add('show'); sidebarOverlayEl.setAttribute('aria-hidden', 'false'); }
     }
@@ -451,6 +709,9 @@
       if (sidebarOverlayEl) { sidebarOverlayEl.classList.remove('show'); sidebarOverlayEl.setAttribute('aria-hidden', 'true'); }
     }
     function toggleSidebar() { sidebarEl && sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar(); }
+    window.addEventListener('resize', function() {
+      if (!isMobile()) closeSidebar();
+    });
     const SIDEBAR_GROUPS = [
       { label: '当代堂口', ids: ['shengsuanzi','naming','bazi','liuyao','qimen','fengshui','ziwei','meihua','liuren','taiyi','cezi','mianxiang','shouxiang','zemeng','zeri'] },
       { label: '老祖·仙人·仙翁', ids: ['xuanji','tianji','yuheng','qingming','guaxian','zixian','mengxian','xiangxian'] },
@@ -500,12 +761,30 @@
       liubowen: { name: '刘伯温', avatar: '温', skill: '预言·术数' },
       laibuyi: { name: '赖布衣', avatar: '赖', skill: '风水' }
     };
+    const SKILL_STYLES = [
+      { match: /八字|命理|取名|紫微/, from: '#8f5b2d', to: '#d7a056', rgb: '215, 160, 86', mark: '命' },
+      { match: /六爻|卦|易经|占卜|梅花|京氏/, from: '#4e6fba', to: '#83a8ff', rgb: '131, 168, 255', mark: '卦' },
+      { match: /奇门|遁甲|大六壬|太乙|三式/, from: '#4d7f6d', to: '#86cfae', rgb: '134, 207, 174', mark: '式' },
+      { match: /风水|玄空|堪舆/, from: '#3f7872', to: '#79c8bc', rgb: '121, 200, 188', mark: '宅' },
+      { match: /测字|字|解梦|梦|面相|手相|相法|相术/, from: '#865f95', to: '#c594d9', rgb: '197, 148, 217', mark: '象' },
+      { match: /择日|黄道|祭祀|婚嫁|开业/, from: '#9b6f22', to: '#e0bd57', rgb: '224, 189, 87', mark: '日' },
+      { match: /星象|天文|预言|推背|玄学|道德经|道家|八卦/, from: '#50627e', to: '#9aaccb', rgb: '154, 172, 203', mark: '玄' },
+    ];
+    const FALLBACK_STYLES = [
+      { from: '#7a4f4b', to: '#cf887c', rgb: '207, 136, 124', mark: '术' },
+      { from: '#566f41', to: '#a4c873', rgb: '164, 200, 115', mark: '术' },
+      { from: '#694f86', to: '#ae8bd3', rgb: '174, 139, 211', mark: '术' },
+      { from: '#78613f', to: '#c8a96a', rgb: '200, 169, 106', mark: '术' },
+    ];
 
     const STORAGE_KEY = 'yisphere_chat';
+    const LLM_STORAGE_KEY = 'yisphere_llm_config';
     const MAX_MESSAGES_PER_MASTER = 500;
 
     let currentMasterId = 'shengsuanzi';
     let messagesByMaster = {};
+    let llmConfig = { base_url: '', api_key: '', model: '', remember: false };
+    let serverLlmDefaults = { base_url: '', model: 'deepseek-chat', has_api_key: false };
 
     function loadChatHistory() {
       try {
@@ -535,9 +814,116 @@
       } catch (e) {}
     }
 
+    function loadLlmConfig() {
+      try {
+        var raw = localStorage.getItem(LLM_STORAGE_KEY);
+        if (!raw) return;
+        var saved = JSON.parse(raw);
+        if (saved && typeof saved === 'object') {
+          llmConfig = {
+            base_url: saved.base_url || '',
+            api_key: saved.api_key || '',
+            model: saved.model || '',
+            remember: !!saved.remember
+          };
+        }
+      } catch (e) {}
+    }
+
+    function saveLlmConfig() {
+      try {
+        if (llmConfig.remember) {
+          localStorage.setItem(LLM_STORAGE_KEY, JSON.stringify(llmConfig));
+        } else {
+          localStorage.removeItem(LLM_STORAGE_KEY);
+        }
+      } catch (e) {}
+    }
+
+    function getEffectiveModelName() {
+      return llmConfig.model || serverLlmDefaults.model || '未设置';
+    }
+
+    function updateModelStatus() {
+      if (!modelStatusEl) return;
+      var source = llmConfig.api_key ? '浏览器' : (serverLlmDefaults.has_api_key ? '后端' : '未配置');
+      modelStatusEl.textContent = '模型：' + getEffectiveModelName() + ' · ' + source;
+      modelStatusEl.title = modelStatusEl.textContent;
+    }
+
+    function openSettings() {
+      if (!settingsOverlayEl) return;
+      llmBaseUrlEl.value = llmConfig.base_url || serverLlmDefaults.base_url || '';
+      llmApiKeyEl.value = llmConfig.api_key || '';
+      llmModelEl.value = llmConfig.model || serverLlmDefaults.model || '';
+      llmRememberEl.checked = !!llmConfig.remember;
+      settingsOverlayEl.classList.add('show');
+      settingsOverlayEl.setAttribute('aria-hidden', 'false');
+      setTimeout(function() { llmBaseUrlEl && llmBaseUrlEl.focus(); }, 0);
+    }
+
+    function closeSettings() {
+      if (!settingsOverlayEl) return;
+      settingsOverlayEl.classList.remove('show');
+      settingsOverlayEl.setAttribute('aria-hidden', 'true');
+    }
+
+    function persistSettingsFromForm() {
+      llmConfig = {
+        base_url: (llmBaseUrlEl.value || '').trim(),
+        api_key: (llmApiKeyEl.value || '').trim(),
+        model: (llmModelEl.value || '').trim(),
+        remember: !!llmRememberEl.checked
+      };
+      saveLlmConfig();
+      updateModelStatus();
+      closeSettings();
+    }
+
+    function clearSettings() {
+      llmConfig = { base_url: '', api_key: '', model: '', remember: false };
+      try { localStorage.removeItem(LLM_STORAGE_KEY); } catch (e) {}
+      if (llmBaseUrlEl) llmBaseUrlEl.value = serverLlmDefaults.base_url || '';
+      if (llmApiKeyEl) llmApiKeyEl.value = '';
+      if (llmModelEl) llmModelEl.value = serverLlmDefaults.model || '';
+      if (llmRememberEl) llmRememberEl.checked = false;
+      updateModelStatus();
+    }
+
+    function getLlmPayload() {
+      var payload = {};
+      if (llmConfig.base_url) payload.base_url = llmConfig.base_url;
+      if (llmConfig.api_key) payload.api_key = llmConfig.api_key;
+      if (llmConfig.model) payload.model = llmConfig.model;
+      return Object.keys(payload).length ? payload : undefined;
+    }
+
     function getCurrentMaster() {
       const m = MASTER_MAP[currentMasterId];
       return m ? { id: currentMasterId, ...m } : { id: 'shengsuanzi', name: '神算子', avatar: '神', gender: '男', age: '五十开外', skill: '综合预测', intro: '易经、八字、六爻、择日皆通，有问必答。' };
+    }
+
+    function hashString(s) {
+      var hash = 0;
+      for (var i = 0; i < s.length; i++) {
+        hash = ((hash << 5) - hash) + s.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+
+    function getMasterStyle(id, master) {
+      var text = [master.skill || '', master.intro || '', master.name || ''].join(' ');
+      for (var i = 0; i < SKILL_STYLES.length; i++) {
+        if (SKILL_STYLES[i].match.test(text)) return SKILL_STYLES[i];
+      }
+      return FALLBACK_STYLES[hashString(id) % FALLBACK_STYLES.length];
+    }
+
+    function applyMasterStyle(el, style) {
+      el.style.setProperty('--avatar-from', style.from);
+      el.style.setProperty('--avatar-to', style.to);
+      el.style.setProperty('--skill-rgb', style.rgb);
     }
 
     function renderSidebar() {
@@ -553,10 +939,12 @@
           const item = document.createElement('div');
           item.className = 'master-item' + (id === currentMasterId ? ' active' : '');
           item.dataset.masterId = id;
+          applyMasterStyle(item, getMasterStyle(id, m));
           var meta = (m.gender && m.age) ? (m.gender + ' · ' + m.age) : '';
           var letter = m.avatar || (m.name && m.name[0]) || id[0];
+          var style = getMasterStyle(id, m);
           var avatarHtml = '<span class="avatar-fallback" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:1rem;font-weight:600;color:#fff">' + letter + '</span>';
-          item.innerHTML = '<div class="avatar">' + avatarHtml + '</div><div class="info"><div class="name">' + (m.name || id) + '</div>' + (meta ? '<div class="meta">' + meta + '</div>' : '') + '<div class="skill">' + (m.skill || '') + '</div></div>';
+          item.innerHTML = '<div class="avatar" data-mark="' + style.mark + '">' + avatarHtml + '</div><div class="info"><div class="name">' + (m.name || id) + '</div>' + (meta ? '<div class="meta">' + meta + '</div>' : '') + '<div class="skill">' + (m.skill || '') + '</div></div>';
           item.addEventListener('click', function() { switchMaster(id); });
           masterListEl.appendChild(item);
         });
@@ -600,8 +988,12 @@
     }
 
     function pushMessage(role, content) {
-      if (!messagesByMaster[currentMasterId]) messagesByMaster[currentMasterId] = [];
-      messagesByMaster[currentMasterId].push({ role: role, content: content });
+      pushMessageForMaster(currentMasterId, role, content);
+    }
+
+    function pushMessageForMaster(masterId, role, content) {
+      if (!messagesByMaster[masterId]) messagesByMaster[masterId] = [];
+      messagesByMaster[masterId].push({ role: role, content: content });
       saveChatHistory();
     }
 
@@ -679,52 +1071,38 @@
       return body;
     }
 
-    function appendToBubble(bubble, text, typewriter) {
-      if (!text) return;
-      const body = ensureMsgBody(bubble);
-      if (!typewriter || text.length <= 1) {
-        body.appendChild(document.createTextNode(text));
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-        return;
-      }
-      let i = 0;
-      function addOne() {
-        if (i < text.length) {
-          body.appendChild(document.createTextNode(text[i]));
-          i++;
-          messagesEl.scrollTop = messagesEl.scrollHeight;
-          setTimeout(addOne, TYPING_DELAY);
-        }
-      }
-      addOne();
-    }
-
     async function send() {
       const text = (inputEl.value || '').trim();
       if (!text) return;
+      const requestMasterId = currentMasterId;
+      const requestMaster = getCurrentMaster();
       inputEl.value = '';
       addMessage('user', text);
-      pushMessage('user', text);
+      pushMessageForMaster(requestMasterId, 'user', text);
       sendBtn.disabled = true;
 
-      const list = messagesByMaster[currentMasterId] || [];
+      const list = messagesByMaster[requestMasterId] || [];
       const messages = list.map(function(m) { return { role: m.role, content: m.content }; });
 
       const { row: thinkRow } = addThinkingRow();
       let fullReply = '';
 
       try {
+        const payload = { messages: messages, master: requestMasterId };
+        const llmPayload = getLlmPayload();
+        if (llmPayload) payload.llm = llmPayload;
         const res = await fetch('/api/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: messages, master: currentMasterId })
+          body: JSON.stringify(payload)
         });
         if (!res.ok || !res.body) {
           thinkRow.remove();
-          const m = getCurrentMaster();
           const errMsg = '请求失败：' + (res.status || '网络错误');
-          addMessage('assistant', errMsg, { masterName: m.name, masterAvatar: m.avatar, masterId: currentMasterId });
-          pushMessage('assistant', errMsg);
+          if (currentMasterId === requestMasterId) {
+            addMessage('assistant', errMsg, { masterName: requestMaster.name, masterAvatar: requestMaster.avatar, masterId: requestMasterId });
+          }
+          pushMessageForMaster(requestMasterId, 'assistant', errMsg);
           sendBtn.disabled = false;
           return;
         }
@@ -760,14 +1138,17 @@
                 if (firstChunk && data.content) {
                   firstChunk = false;
                   thinkRow.remove();
-                  const m = getCurrentMaster();
-                  const r = addMessage('assistant', '', { masterName: m.name, masterAvatar: m.avatar, masterId: currentMasterId });
-                  assistantBubble = r.bubble;
+                  if (currentMasterId === requestMasterId) {
+                    const r = addMessage('assistant', '', { masterName: requestMaster.name, masterAvatar: requestMaster.avatar, masterId: requestMasterId });
+                    assistantBubble = r.bubble;
+                  }
                 }
-                if (data.content && assistantBubble) {
+                if (data.content) {
                   fullReply += data.content;
-                  textBuffer += data.content;
-                  if (!typewriterTimer) typewriterTimer = setTimeout(flushTypewriter, TYPING_DELAY);
+                  if (assistantBubble) {
+                    textBuffer += data.content;
+                    if (!typewriterTimer) typewriterTimer = setTimeout(flushTypewriter, TYPING_DELAY);
+                  }
                 }
               } catch (_) {}
             }
@@ -783,16 +1164,18 @@
         if (firstChunk) {
           thinkRow.remove();
           fullReply = '（暂无回复）';
-          const m = getCurrentMaster();
-          addMessage('assistant', fullReply, { masterName: m.name, masterAvatar: m.avatar, masterId: currentMasterId });
+          if (currentMasterId === requestMasterId) {
+            addMessage('assistant', fullReply, { masterName: requestMaster.name, masterAvatar: requestMaster.avatar, masterId: requestMasterId });
+          }
         }
-        pushMessage('assistant', fullReply);
+        pushMessageForMaster(requestMasterId, 'assistant', fullReply);
       } catch (e) {
         thinkRow.remove();
         const errMsg = '请求失败：' + (e.message || '网络错误');
-        const m = getCurrentMaster();
-        addMessage('assistant', errMsg, { masterName: m.name, masterAvatar: m.avatar, masterId: currentMasterId });
-        pushMessage('assistant', errMsg);
+        if (currentMasterId === requestMasterId) {
+          addMessage('assistant', errMsg, { masterName: requestMaster.name, masterAvatar: requestMaster.avatar, masterId: requestMasterId });
+        }
+        pushMessageForMaster(requestMasterId, 'assistant', errMsg);
       }
       sendBtn.disabled = false;
     }
@@ -817,14 +1200,52 @@
         .catch(function() { updateChatHeader(); });
     }
 
+    function initLlmDefaults() {
+      updateModelStatus();
+      fetch('/api/llm/defaults')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          serverLlmDefaults = {
+            base_url: data.base_url || '',
+            model: data.model || 'deepseek-chat',
+            has_api_key: !!data.has_api_key
+          };
+          updateModelStatus();
+        })
+        .catch(function() { updateModelStatus(); });
+    }
+
     loadChatHistory();
+    loadLlmConfig();
     renderSidebar();
     updateChatHeader();
     restoreCurrentConversation();
     initMasters();
+    initLlmDefaults();
 
     if (menuBtnEl) menuBtnEl.addEventListener('click', toggleSidebar);
     if (sidebarOverlayEl) sidebarOverlayEl.addEventListener('click', closeSidebar);
+    if (settingsBtnEl) settingsBtnEl.addEventListener('click', openSettings);
+    if (settingsCloseEl) settingsCloseEl.addEventListener('click', closeSettings);
+    if (settingsCancelEl) settingsCancelEl.addEventListener('click', closeSettings);
+    if (settingsFormEl) {
+      settingsFormEl.addEventListener('submit', function(e) {
+        e.preventDefault();
+        persistSettingsFromForm();
+      });
+    }
+    if (settingsClearEl) settingsClearEl.addEventListener('click', clearSettings);
+    if (settingsOverlayEl) {
+      settingsOverlayEl.addEventListener('click', function(e) {
+        if (e.target === settingsOverlayEl) closeSettings();
+      });
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeSettings();
+        if (isMobile()) closeSidebar();
+      }
+    });
 
     sendBtn.addEventListener('click', send);
     inputEl.addEventListener('keydown', (e) => {

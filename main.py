@@ -44,6 +44,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
     master: str | None = None  # 角色 id：shengsuanzi / naming / bazi / liuyao / qimen / fengshui
+    llm: dict[str, str] | None = None  # UI 可临时覆盖 api_key/base_url/model
 
 
 class ChatResponse(BaseModel):
@@ -114,7 +115,7 @@ def api_avatar(master_id: str):
 async def api_chat(req: ChatRequest):
     """多轮对话（非流式）。"""
     messages = [{"role": m.role, "content": m.content} for m in req.messages]
-    reply = await chat_service.reply(messages, inject_tools=True, master_id=req.master)
+    reply = await chat_service.reply(messages, inject_tools=True, master_id=req.master, llm_config=req.llm)
     return ChatResponse(message=ChatMessage(role=reply["role"], content=reply["content"]))
 
 
@@ -125,7 +126,7 @@ async def api_chat_stream(req: ChatRequest):
 
     async def event_stream():
         async for chunk in chat_service.reply_stream(
-            messages, inject_tools=True, master_id=req.master
+            messages, inject_tools=True, master_id=req.master, llm_config=req.llm
         ):
             yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
 
@@ -162,6 +163,16 @@ def api_huangli_select(req: HuangliSelectRequest):
 def api_iching_draw():
     """随机起一卦。"""
     return iching_service.draw_random()
+
+
+@app.get("/api/llm/defaults")
+def api_llm_defaults():
+    """返回后端默认 LLM 配置状态，不暴露 API Key。"""
+    return {
+        "base_url": os.getenv("OPENAI_API_BASE", ""),
+        "model": os.getenv("OPENAI_MODEL", "deepseek-chat"),
+        "has_api_key": bool(os.getenv("OPENAI_API_KEY")),
+    }
 
 
 @app.post("/api/tools/calendar/solar2lunar")
