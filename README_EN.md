@@ -14,7 +14,7 @@
     <a href="https://github.com/0xfnzero/YiSphere/network">
         <img src="https://img.shields.io/github/forks/0xfnzero/YiSphere?style=social" alt="GitHub forks">
     </a>
-    <a href="https://github.com/0xfnzero/YiSphere/blob/main/LICENSE">
+    <a href="#license">
         <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
     </a>
 </p>
